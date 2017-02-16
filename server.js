@@ -12,7 +12,7 @@ app.get('/fetch', function (req, res) {
   for (let urlIndex = 0; urlIndex < listOfURL.length; urlIndex++) {
     let array = listOfURL[urlIndex].split('/')
     let studio = array[array.length - 1]
-    let actors = ''
+    let actors = '['
     axios.get(listOfURL[urlIndex])
       .then(function (response) {
         for (let index = 0; index < response.data.length; index++) {
@@ -44,5 +44,10 @@ app.get('/fetch1', function (req, res) {
         console.log(error)
       })
   }
+})
+app.get('/movie/:movieName', function (req, res) {
+  console.log('Hello')
+  let movieName = req.params.movieName
+  operation.read(sequelize, res, movieName)
 })
 app.listen(3000)

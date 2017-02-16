@@ -22,6 +22,18 @@ let operation = {
       .catch(function () {
          console.log('Error in Updating')
       })
+  },
+  read: function (sequelize, response, moviename) {
+    let query = `SELECT moviename,releasedate,actors,studio FROM movies where moviename = '${moviename}';`
+    sequelize.query(query)
+      .then(function (tasks) {
+        //console.log(tasks)
+        response.json(tasks[0])
+      })
+      .catch(function () {
+        console.log('Error in reading todo list')
+        response.send('Error in reading todo list')
+      })
   }
 }
 
