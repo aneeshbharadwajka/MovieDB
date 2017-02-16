@@ -24,14 +24,25 @@ app.get('/fetch', function (req, res) {
       .catch(function (error) {
         console.log(error)
       })
-    for (let actorIndex = 0; actorIndex < listOfActors.length; actorIndex++) {
-      axios.get(listOfActors[actorIndex])
+  }
+})
+
+app.get('/fetch1', function (req, res) {
+  console.log('Hello')
+  for (let actorIndex = 0; actorIndex < listOfActors.length; actorIndex++) {
+    axios.get(listOfActors[actorIndex])
       .then(function (response) {
-        for (let index = 0; index < response.movies.length; index++) {
-          operation.update(sequelize,res,response.movies[index],response.actorName)
+        console.log(response.data[0].movies.length)
+        for (let index = 0; index < response.data.length; index++) {
+          let arrayOfMovies = response.data[index].movies
+          for (let movieindex = 0; movieindex < arrayOfMovies.length; movieindex++) {
+            operation.update(sequelize, res, response.data[index].movies[movieindex], response.data[index].actorName)
+          }
         }
       })
-    }
+      .catch(function (error) {
+        console.log(error)
+      })
   }
 })
 app.listen(3000)

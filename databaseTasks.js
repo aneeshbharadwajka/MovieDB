@@ -9,30 +9,18 @@ let operation = {
         response.send('Error in Inserting', err)
       })
   },
-
-  readItems: function (sequelize, response) {
-    sequelize.query('SELECT id,description,status FROM tasks order by id',
-      { type: sequelize.QueryTypes.SELECT })
-      .then(function (tasks) {
-        response.json(tasks)
-      })
-      .catch(function () {
-        console.log('Error in reading todo list')
-        response.send('Error in reading todo list')
-      })
-  },
   update: function (sequelize, response, moviename, actor) {
-    let query = `UPDATE movies set actor = concat(actor,'${actor}') WHERE moviename = '${moviename});`
+    let query = `UPDATE movies SET actors = concat(actors,', ${actor}') WHERE moviename = '${moviename}';`
     sequelize.query(query)
       .then(function (task) {
         if (task[1].rowCount) {
-          response.send(`The task with id=${moviename} has been updated`)
+          // response.send(`The task with id=${moviename} has been updated`)
         } else {
-          response.send(`The task with id=${moviename} doesnt exist to update`)
+          // response.send(`The task with id=${moviename} doesnt exist to update`)
         }
       })
       .catch(function () {
-        response.send('Error in Updating')
+         console.log('Error in Updating')
       })
   }
 }
