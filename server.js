@@ -2,52 +2,88 @@ const express = require('express')
 const axios = require('axios')
 const operation = require('./databaseTasks.js')
 const app = express()
-const Sequelize = require('sequelize')
-const sequelize = new Sequelize('postgres://aneeshbharadwajka:15226@localhost:5432/testdb')
+let movieActorData = []
 let listOfURL = ['https://movie-api-lyalzcwvbg.now.sh/paramount',
   'https://movie-api-lyalzcwvbg.now.sh/dreamworks']
-let listOfActors = ['https://movie-api-lyalzcwvbg.now.sh/actors']
+const movies = []
+const getActors = () => axios.get('https://movie-api-lyalzcwvbg.now.sh/actors')
+
+getActors()
+  .then((response) => {
+    const actorArray = response.data
+    actorArray.forEach((actor) => {
+      const actMovies = actor.movies
+      actMovies.forEach((movie) => {
+        if (movies.includes(movie) === false) { movies.push(movie) }
+      })
+    })
+    // console.log(movies)
+    for (let iter = 0; iter < movies.length; iter++) {
+      const temp = []
+
+      // console.log(movies[iter])
+      actorArray.forEach((actor) => {
+        const actMovies = actor.movies
+        actMovies.forEach((movie, index) => {
+          if (movie === movies[iter]) {
+            temp.push(actor.actorName)
+          }
+        })
+      })
+      // console.log(temp)
+      movieActorData.push(`${movies[iter]}-${temp}`)
+    }
+    // console.log(movieActorData)
+  })
+  .catch((error) => {
+    console.log(error)
+  })
 
 app.get('/fetch', function (req, res) {
   for (let urlIndex = 0; urlIndex < listOfURL.length; urlIndex++) {
-    let array = listOfURL[urlIndex].split('/')
-    let studio = array[array.length - 1]
-    let actors = '[ '
+    let temporaryArray = listOfURL[urlIndex].split('/')
+    let studio = temporaryArray[temporaryArray.length - 1]
+    let actors
     axios.get(listOfURL[urlIndex])
       .then(function (response) {
         for (let index = 0; index < response.data.length; index++) {
-          operation.write(sequelize, res, response.data[index].movieName,
-            response.data[index].releaseDate, studio, actors)
-        }
-        // console.log(response.data[0].movieName)
-      })
-      .catch(function (error) {
-        console.log(error)
-      })
-  }
-})
-
-app.get('/fetch1', function (req, res) {
-  console.log('Hello')
-  for (let actorIndex = 0; actorIndex < listOfActors.length; actorIndex++) {
-    axios.get(listOfActors[actorIndex])
-      .then(function (response) {
-        console.log(response.data[0].movies.length)
-        for (let index = 0; index < response.data.length; index++) {
-          let arrayOfMovies = response.data[index].movies
-          for (let movieindex = 0; movieindex < arrayOfMovies.length; movieindex++) {
-            operation.update(sequelize, res, response.data[index].movies[movieindex], response.data[index].actorName)
+          for (let iter = 0; iter < movieActorData.length; iter++) {
+            const elementMovieActor = movieActorData[iter]
+            if (elementMovieActor.includes(response.data[index].movieName)) {
+              let tempArray = elementMovieActor.split('-')
+              actors = tempArray[1].split(',')
+              console.log(actors)
+              operation.write(response.data[index].movieName,
+                response.data[index].releaseDate, studio, actors)
+                .then((response) => {
+                  console.log('Successfully Inserted')
+                })
+                .catch((error) => {
+                  console.log(error.toString())
+                })
+            }
           }
         }
       })
-      .catch(function (error) {
-        console.log(error)
-      })
+    res.send('Success')
   }
 })
+
 app.get('/movie/:movieName', function (req, res) {
-  console.log('Hello')
   let movieName = req.params.movieName
-  operation.read(sequelize, res, movieName)
+  console.log(req.params.movieName)
+  if (movieName === '') {
+    res.send('No movie specified')
+  } else {
+    operation.read(movieName)
+    .then((data) => {
+      res.json(data[0])
+    })
+    .catch((error) => {
+      res.send('Not present in the DB' + error.toString())
+    })
+  }
 })
+
 app.listen(3000)
+
