@@ -14,9 +14,9 @@ describe('when read function is called', function () {
 
 describe('Valid Insert operation', function () {
   it('should return Success', function (done) {
-    dbTasks.write('movie23', 'DreamWorks', 'March-25-2015', ['actor2', 'actor5', 'actor9'])
+    dbTasks.write('movie26', 'March-25-2015', 'DreamWorks', ['actor2', 'actor5', 'actor9'])
       .then((data) => {
-        expect(data[0].moviename).to.eqls('movie23')
+        expect(data[0].moviename).to.eqls('movie26')
         done()
       })
   })

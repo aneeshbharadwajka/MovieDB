@@ -1,89 +1,119 @@
-const express = require('express')
 const axios = require('axios')
-const operation = require('./databaseTasks.js')
+const express = require('express')
 const app = express()
-let movieActorData = []
-let listOfURL = ['https://movie-api-lyalzcwvbg.now.sh/paramount',
-  'https://movie-api-lyalzcwvbg.now.sh/dreamworks']
-const movies = []
+const operation = require('./databaseTasks')
 const getActors = () => axios.get('https://movie-api-lyalzcwvbg.now.sh/actors')
+const getMovie = (studio) => axios.get(`https://movie-api-lyalzcwvbg.now.sh/${studio}`)
+Array.prototype.diff = function (a) {
+  return this.filter(function (i) { return a.indexOf(i) < 0 })
+}
+const listOfFetches = [axios.get('https://movie-api-lyalzcwvbg.now.sh/paramount1'), axios.get('https://movie-api-lyalzcwvbg.now.sh/dreamworks'), axios.get('https://movie-api-lyalzcwvbg.now.sh/actors')]
+app.get('/movie/:movieName', (req, res) => {
+  const name = req.params.movieName
+  const displayGivenMovie = operation.read(name)
+  displayGivenMovie.then((data) => {
+    console.log(data)
+    res.send(data[0])
+  })
+    .catch(() => {
+      res.send('fdf500')
+    })
+})
 
-getActors()
-  .then((response) => {
-    const actorArray = response.data
+app.get('/fetch', (req, response) => {
+  const movieData = []
+  const movies = []
+  const movieActorData = []
+  const movieProduction = []
+  Promise.all(listOfFetches).then((response) => {
+    const movieResponseArray1 = response[0].data
+    movieResponseArray1.forEach((movie) => {
+      movieData.push(movie)
+      movieProduction[movie.movieName] = 'paramount'
+    })
+    const movieResponseArray2 = response[1].data
+    movieResponseArray2.forEach((movie) => {
+      movieData.push(movie)
+      movieProduction[movie.movieName] = 'dreamworks'
+    })
+    const actorArray = response[2].data
     actorArray.forEach((actor) => {
       const actMovies = actor.movies
       actMovies.forEach((movie) => {
-        if (movies.includes(movie) === false) { movies.push(movie) }
+        if (movies.includes(movie) === false)        { movies.push(movie) }
       })
     })
-    // console.log(movies)
     for (let iter = 0; iter < movies.length; iter++) {
       const temp = []
-
-      // console.log(movies[iter])
       actorArray.forEach((actor) => {
         const actMovies = actor.movies
-        actMovies.forEach((movie, index) => {
+        actMovies.forEach((movie) => {
           if (movie === movies[iter]) {
             temp.push(actor.actorName)
           }
         })
       })
-      // console.log(temp)
-      movieActorData.push(`${movies[iter]}-${temp}`)
+      movieActorData.push(`${movies[iter]}:${temp}`)
     }
-    // console.log(movieActorData)
-  })
-  .catch((error) => {
-    console.log(error)
-  })
-
-app.get('/fetch', function (req, res) {
-  for (let urlIndex = 0; urlIndex < listOfURL.length; urlIndex++) {
-    let temporaryArray = listOfURL[urlIndex].split('/')
-    let studio = temporaryArray[temporaryArray.length - 1]
-    let actors
-    axios.get(listOfURL[urlIndex])
-      .then(function (response) {
-        for (let index = 0; index < response.data.length; index++) {
-          for (let iter = 0; iter < movieActorData.length; iter++) {
-            const elementMovieActor = movieActorData[iter]
-            if (elementMovieActor.includes(response.data[index].movieName)) {
-              let tempArray = elementMovieActor.split('-')
-              actors = tempArray[1].split(',')
-              console.log(actors)
-              operation.write(response.data[index].movieName,
-                response.data[index].releaseDate, studio, actors)
-                .then((response) => {
-                  console.log('Successfully Inserted')
-                })
-                .catch((error) => {
-                  console.log(error.toString())
-                })
-            }
-          }
+    let names = ''
+    let releasedates = ''
+    let actors = []
+    let studios = ''
+    let flag = false
+    movieData.forEach((movie) => {
+      names = movie.movieName
+      releasedates = movie.releaseDate
+      studios = movieProduction[names]
+      for (let iter = 0; iter < movieActorData.length; iter++) {
+        const elementMovieActor = movieActorData[iter]
+        if (elementMovieActor.includes(names)) {
+          let tempArray = elementMovieActor.split(':')
+          actors = tempArray[1].split(',')
+          const insMovie = operation.write(names, studios, releasedates, actors)
+          insMovie.then(() => {
+            flag = true
+          })
+            .catch(() => {
+              flag = false
+            })
         }
-      })
-    res.send('Success')
-  }
-})
-
-app.get('/movie/:movieName', function (req, res) {
-  let movieName = req.params.movieName
-  console.log(req.params.movieName)
-  if (movieName === '') {
-    res.send('No movie specified')
-  } else {
-    operation.read(movieName)
-    .then((data) => {
-      res.json(data[0])
+      }
     })
-    .catch((error) => {
-      res.send('Not present in the DB' + error.toString())
+    let actorMovies = []
+    for (let iter = 0; iter < movieActorData.length; iter++) {
+      const elementMovieActor = movieActorData[iter]
+      let tempArray = elementMovieActor.split(':')
+      actorMovies.push(tempArray[0])
+    }
+    let nameArray = []
+    movieData.forEach((movie) => {
+      names = movie.movieName
+      nameArray.push(names)
     })
-  }
-})
+    let noActorMovies = nameArray.diff(actorMovies)
 
+    movieData.forEach((movie) => {
+      for (let iter = 0; iter < noActorMovies.length; iter++) {
+        if (movie.movieName === (noActorMovies[iter])) {
+          names = movie.movieName
+          releasedates = movie.releaseDate
+          studios = movieProduction[names]
+          const insMovie = operation.write(names, studios, releasedates, '')
+          insMovie.then(() => {
+            flag = true
+          })
+            .catch(() => {
+              flag = false
+            })
+        }
+      }
+    })
+  })
+    .catch(() => {
+      response.send('Problems')
+    })
+  console.log('hello')
+  response.send('Successfully inserted movie data')
+  // response.send('Successfully inserted movie data')
+})
 app.listen(3000)
-
